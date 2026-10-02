@@ -3,15 +3,20 @@ const morgan = require('morgan');
 const moment = require('moment');
 const path = require('path');
 
-// Local settings for this machine. See config.example.json.
-const config = require('./config.json');
+// Configuration comes from environment variables, with defaults where the spec gives one.
+const PORT = process.env.PORT || 3000;
 
-const PORT = process.env.PORT || config.port || 3000;
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || config.adminToken;
+// No default on purpose: the old fallback was a token published in the repo.
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+
+function parsePositiveInt(raw, fallback) {
+  const n = Number.parseInt(raw, 10);
+  return Number.isInteger(n) && n > 0 ? n : fallback;
+}
 
 // Settings the web UI reads when the page loads.
 const settings = {
-  maxTextLength: config.maxTextLength || 200,
+  maxTextLength: parsePositiveInt(process.env.MAX_TEXT_LENGTH, 200),
   adminToken: ADMIN_TOKEN,
   version: require('./package.json').version
 };
