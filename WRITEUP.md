@@ -10,10 +10,47 @@
 The first error you hit, copied exactly as it appeared:
 
 ```
-(paste it here)
+npm ERR! code EJSONPARSE
+npm ERR! path /Users/abdirihim/Downloads/appvia-academy-challenge/app/package.json
+npm ERR! JSON.parse Unexpected token "}" (0x7D) in JSON at position 297 while parsing near "...rgan\": \"^1.10.0\",\n  }\n}\n"
+npm ERR! JSON.parse Failed to parse JSON data.
+npm ERR! JSON.parse Note: package.json must be actual JSON, not just JavaScript.
+
+npm ERR! A complete log of this run can be found in:
+npm ERR!     /Users/abdirihim/.npm/_logs/2026-10-02T01_54_09_144Z-debug-0.log
 ```
 
 What you did about it:
+
+I opened the package.json file, i saw on the last dependency there was an extra comma after 'morgan' and then i removed it and checked that every other entry still has its comma. This is because JSON doesn't allow a trailing comma after the last item in an object or array but JavaScript objects do.
+
+
+The second error i hit:
+
+```
+npm install
+
+added 73 packages, and audited 74 packages in 3s
+
+17 packages are looking for funding
+  run `npm fund` for details
+
+1 high severity vulnerability
+
+To address all issues, run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+npm notice 
+npm notice New major version of npm available! 9.5.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice Run npm install -g npm@12.2.0 to update!
+npm notice 
+
+```
+What you did about it:
+I ran npm audit to get a better understanding of what the severity vulnerability may be and it seemed to be one of the dependencies called 'moment'. I was not sure why so i asked AI what is wrong with its version and it seemed to be running on a vulnerable version. So i used the internet to search for a version that will work and then used npm install moment@^2.31.0 which updated it to be a non-vulnerable version.
+
 
 ## 2. What was broken
 
@@ -23,8 +60,11 @@ changed.
 
 | # | Where (file) | Symptom | How I found it | Root cause | My fix |
 |---|--------------|---------|----------------|------------|--------|
-| 1 |              |         |                |            |        |
-| 2 |              |         |                |            |        |
+| 1 | package.json |npm install failed|Ran npm install and read the error. It named the file and quoted the text around the failure ("morgan": "^1.10.0", followed by }).|An extra comma found after the 'morgan' dependency JSON doesn't allow extra comma after the last entry and npm needs package.json to be strict JSON|Removed the comma after the morgan entry.|
+| 2 |package.json|npm install reported 1 high severity vulnerability|Read the install output, then ran npm audit|moment pinned to exactly 2.29.1 (no ^), a version that was vulnerable, so npm couldn't update it|Upgraded to a non-vulnerable release|
+| 3||         |                |            |        |
+| 4||         |                |            |        |
+| 5 ||         |                |            |        |
 
 ## 3. What I didn't fix
 
