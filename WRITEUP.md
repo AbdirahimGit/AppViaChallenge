@@ -1,4 +1,4 @@
-# Write-up: [your name]
+# Write-up: [Abdirihim]
 
 > Fill in each section below. Bullet points are fine. Clarity beats length.
 > If we take your application forward, you'll talk someone from our team
@@ -185,40 +185,76 @@ changed.
 
 ## 3. What I didn't fix
 
-Anything you found but didn't fix, or suspected but couldn't pin down, and
-why. Leave this blank if there's nothing.
+A ran out of time, and I wasn't sure how to approach some of the harder parts,
+so I only fixed four faults. I'd rather tell you what's left than pretend it's done.
+
+Problems I know about but haven't fixed:
+
+- I found these by reading`server.js` against the spec, with AI helping me spot them. I haven't fixed or tested any of them yet, so I'm describing them from reading the code only.
+
+- The admin token is visible to anyone.** The `/api/settings` page includes the admin token, and the spec says that page must contain nothing secret. Anyone could read the token and use it to wipe the board.
+
+Things I haven't looked at yet:
+
+- The admin reset may not be properly locked: If no token is configured, the check can end up comparing "nothing" to "nothing", which counts as a match. So a request with no token might get through. I removed the default token in my fix for the config problem, so this needs fixing before anyone deploys the app.
+- The `PORT` setting is ignored: The port is typed in as 3000 in one place, so the `PORT` variable has no effect.
+- A todo can be ticked but not unticked: I think there's a typo in the toggle code (`complete` instead of `completed`), so it always ends up as done.
+- Deleting a todo that doesn't exist may delete the wrong one: If the id sn't found, I think the code removes the last todo in the list instead of eturning a 404. That could be related to todos disappearing.
+- The web page code: I haven't checked how task text is shown, so I don't know if bold works or if typing HTML into a task is safe.
+- The Friday investigation: I haven't completed this part. I didn't know how to approach reading an access log, and I ran out of time. I haven't drawn any conclusions about what happened on Friday, and I don't want to guess. What I understand about the task: the log shows every request to the app, with the address it came from, the time, the request, and the response code. My plan would be to find requests to the admin reset route, check which addresses made them and whether they came from inside the company network, check the times, and match them against the faults I found in `server.js`.
+-
 
 ## 4. Security
 
-Which of the problems were security problems? For each one, what could
-someone actually do with it?
+1. A vulnerable dependency (fixed) `moment` was pinned to a version with two known problems: a path traversal bug and running a known-vulnerable version is still bad practice. I upgraded it.
+
+2. The admin token is shown to anyone (not fixed yet) `/api/settings` includes `adminToken`, but the spec says that page must contain nothing secret. Anyone who can reach the app can read the token and use it to call the reset route, which deletes every todo.
 
 ## 5. One decision
 
-Pick one fix where you considered more than one approach. What were the
-options, and why did you choose the one you did?
+The decision I want to talk about is how I fixed the `config.json` crash(#3).
+
+When I ran `npm start`, the app crashed because `server.js` tried to load a file
+called `config.json`, and that file isn't in the repo. Only an example file is.
+The original developer must have had the real one on their own laptop, so it
+worked for them and nobody else.
+
+I thought about 2 ways to fix it.
+
+Option 1: copy `config.example.json` to `config.json`. This was the quickest,
+and the app would have started straight away. But it only fixes it on my
+machine. The spec says it has to work from a fresh clone with no config file, so
+anyone else who cloned the repo would hit the same crash. It would also have
+made the app run with the admin token from the example file, and that token is
+public in the repo. So I ruled it out.
+
+Option 3: read everything from environment variables, with defaults. This is
+what I chose. The spec already tells you where the values come from: the port
+defaults to 3000 and `PORT` overrides it. So there's no file left that can go missing, and it's how
+deployed apps are normally configured.
+
 
 ## 6. What happened on Friday
 
-- Timeline (times from the log, and what happened):
-- How it was possible:
-- Did everything users complained about that day have the same cause?
-- What should happen now, beyond deploying the fixed code:
-- Summary for Taskboard's owner (not technical, 150 words at most):
+Incomplete
 
 ## 7. My top three improvements
 
 Exactly three, in priority order, with your reasoning for both the choice and
 the order.
 
-1.
-2.
-3.
+1. My top improvement is making the tasks survive a restart, because right now they live in memory. The simplest first step would be saving them to a file or SQLite, which needs no extra software. For production with more than one instance, I'd move to a real database such as Redis with persistence turned on, or Postgres, so the data is shared and durable. I'd keep a fallback so the app still starts with nothing configured.
+
+2. The app has no login, so anyone who can reach it can read, change and delete every task. The only protected route is the admin reset, and that was exposed through the settings page. The log I read earlier suggests addresses outside the company network called the reset route, but verify that yourself before you claim it.
+
+The improvement: put the app behind a login (or at least restrict it to the company network), and add basic rate limiting so one address can't hammer it. Also keep the admin token in a proper secret store and change it regularly.
+
+3. Add automated tests that check the app against the spec:
+Most of the bugs I found were small slips, such as a typo in `completed` and a check that didn't test the type. Nothing caught them, so they reached users. I'd turn the spec into automated tests that call each endpoint: bad text gets a 400 toggling twice flips the flag back, deleting an unknown id gets a 404, and `/api/settings` has no secrets in it.
 
 ## 8. Optional: what I built
 
-If you built one of your improvements: what you built, how far you got, and
-what you would do next. Leave this blank if you didn't.
+Incomplete
 
 ## 9. How to run my submission
 
@@ -228,12 +264,22 @@ what you would do next. Leave this blank if you didn't.
 
 ## 10. How I worked
 
-Which resources and tools you used (documentation, search, AI assistants,
-people, anything else), what you used them for, and how you checked what
-they told you.
+Claude AI for guidance and research, google search for 'moment' depedency
 
 ## 11. Reflections
 
-- The hardest part of this exercise was:
-- One thing I learned doing it:
+- The hardest part of this exercise was:Two things. The first was that I didn't know much about JSON, so the first error(`EJSONPARSE`) meant nothing to me at first. I had to work out that JSON is stricter than JavaScript and doesn't allow a comma after the last item. The second was the report and investigation section (Part 2). I didn't know how to read an access log or how to turn it into a script, and I ran out of time before I could finish it.
+
+- One thing I learned doing it: I learned how engineers work on a big problem by solving it in small steps. At the start the app wouldn't even install, so it felt like one huge problem. But each time I fixed one small thing, the next error showed me what was wrong next: the comma stopped `npm install`, then the audit warning, then the missing `config.json`, then the text validation. I learned to read each error message carefully, fix one thing at a time, test it, and commit it on its own. That made the problem feel much smaller than it did at the start.
+
+I also learned that a quick fix isn't always the right one. For example, copying the example config file would have made the app start on my laptop, but it wouldn't have worked for anyone else, and it would have used a public password. The spec was my guide for what "fixed" really means.
+
 - If I had another day, I would:
+
+1. Fix the faults I found but haven't fixed yet: the admin token showing on
+     the settings page, the weak admin reset check, the ignored `PORT`, the
+     toggle typo and the delete bug.
+2. Check the web page code, for bold text and for unsafe HTML in tasks.
+3. Learn how to read the access log properly, finish `report.sh`, and work out
+     what happened on Friday.
+4. Add a few automated tests, so these small mistakes can't come back.
