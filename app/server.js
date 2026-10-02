@@ -23,7 +23,7 @@ const settings = {
 
 const app = express();
 
-app.use(morgan('combined'));
+app.use(morgan('combined')); 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -48,12 +48,13 @@ app.get('/api/todos', (req, res) => {
 });
 
 app.post('/api/todos', (req, res) => {
-  if (!req.body.text) {
-    return res.status(400).json({ error: 'text is required' });
+  const raw = req.body && req.body.text;
+  if (typeof raw !== 'string' || raw.trim() === '') {
+    return res.status(400).json({ error: 'text must be a non-empty string' });
   }
   // Long text is cut to the limit rather than rejected: the old mobile
   // app relies on this.
-  const text = req.body.text.trim().slice(0, settings.maxTextLength);
+  const text = raw.trim().slice(0, settings.maxTextLength);
   const todo = {
     id: nextId++,
     text: text,
